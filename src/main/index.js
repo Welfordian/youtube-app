@@ -1,6 +1,7 @@
-import { app, BrowserWindow, Menu, protocol, globalShortcut, powerSaveBlocker } from 'electron'
+import { app, BrowserWindow, Menu, protocol, globalShortcut, powerSaveBlocker, session } from 'electron'
 var express = require('express');
 var svr = express();
+const console = require('console');
 
 /**
  * Set `__static` path to static files in production
@@ -17,9 +18,11 @@ const winURL = process.env.NODE_ENV === 'development'
   : `http://localhost:3000`
 
 function createWindow () {
-  /**
-   * Initial window options
-   */
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({responseHeaders: `default-src *; style-src 'self' http://* 'unsafe-inline'; script-src 'self' http://* 'unsafe-inline' 'unsafe-eval'`})
+  })
+
+
   mainWindow = new BrowserWindow({
     frame: false,
     transparent: true,
@@ -29,9 +32,62 @@ function createWindow () {
     registerURLSchemeAsSecure:'file://',
     registerURLSchemeAsBypassingCSP: 'file://',
     registerURLSchemeAsPrivileged : 'file://',
-    webPreferences: {
-      webSecurity: false,
-      allowRunningInsecureContent: true
+  })
+
+  mainWindow.webContents.on('new-window', (event, url, frameName, disposition, options, additionalFeatures) => {
+    if (frameName === 'spotifyAuth' || frameName === 'youtubeAuth') {
+      // open window as modal
+      event.preventDefault()
+
+      if (frameName === 'spotifyAuth') {
+        Object.assign(options, {
+          width: 400,
+          height: 600,
+          frame: true,
+          transparent: false,
+        })
+      }
+
+      if (frameName === 'youtubeAuth') {
+        Object.assign(options, {
+          width: 350,
+          height: 600,
+          frame: true,
+          transparent: false,
+        })
+      }
+
+      event.newGuest = new BrowserWindow(options)
+
+      if (frameName === 'youtubeAuth') {
+        event.newGuest.webContents.on('did-finish-load', (e, title) => {
+          if (e.sender.webContents.history[1] !== undefined) {
+            if (e.sender.webContents.history[1].startsWith('http://localhost')) {
+              mainWindow.webContents.send('YouTubeAuthComplete', e.sender.webContents.history[1]);
+              event.newGuest.close();
+            }
+          }
+        });
+      }
+
+      event.newGuest.webContents.on('will-navigate', (e, newUrl) => {
+        if (frameName === 'spotifyAuth') {
+          if (newUrl.startsWith('http://localhost')) {
+            mainWindow.webContents.send('SpotifyAuthComplete', newUrl);
+            event.newGuest.close();
+          }
+        }
+
+        if (frameName === 'youtubeAuth') {
+          //console.log(newUrl);
+          if (newUrl.startsWith('http://localhost')) {
+            mainWindow.webContents.send('YouTubeAuthComplete', newUrl);
+            event.newGuest.close();
+          }
+        }
+
+      });
+      event.newGuest.loadURL(url);
     }
   })
 
