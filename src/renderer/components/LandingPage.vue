@@ -1,8 +1,7 @@
 <template>
   <div>
     <input type="text" class="form-control" placeholder="Search for a video or enter a YouTube Video URL..." v-model="searchTerm" v-if="!videoId" />
-    <div class="overlay" v-if="videoId">
-      <div class="drag"></div>
+    <div class="overlay" :class="{'shown': overlay}" v-if="videoId">
       <div class="videoInfo">
         <p>Title</p>
       </div>
@@ -25,11 +24,26 @@
   const axios = require('axios');
   const remote = electron.remote;
   const Menu = remote.Menu;
+  const $ = require('jquery');
   import {ipcRenderer} from 'electron'
 
 
   export default {
     beforeMount() {
+      $(document).on('mouseover', () => {
+        console.log('Mouse in!');
+        if (this.player) {
+          this.overlay = true;
+        }
+      });
+
+      $(document).on('mouseout', () => {
+        console.log('Mouse out!');
+        if (this.player) {
+          this.overlay = false;
+        }
+      });
+
       ipcRenderer.on('PlayPause', (event, arg) => {
         var state = this.player.getPlayerState();
         if(state === 1) {
@@ -99,6 +113,7 @@
         playlistIndex: 0,
         searchTerm: "",
         stayOnTop: false,
+        overlay: false,
       }
     },
 
@@ -305,7 +320,7 @@
     pointer-events: none;
   }
 
-  .overlay:hover {
+  .overlay.shown {
     opacity: 1;
   }
 </style>
