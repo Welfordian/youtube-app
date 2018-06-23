@@ -2,6 +2,7 @@
   <div>
     <input type="text" class="form-control" placeholder="Search for a video or enter a YouTube Video URL..." v-model="searchTerm" v-if="!videoId" />
     <div class="overlay" v-if="videoId">
+      <div class="drag"></div>
       <div class="videoInfo">
         <p>Title</p>
       </div>
@@ -265,7 +266,6 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
     opacity: 0;
-    -webkit-app-region: drag;
     -webkit-transition: all 250ms;
     display: flex;
     flex-direction: column;
@@ -278,7 +278,8 @@
   }
 
   .videoInfo {
-    align-items: flex-start
+    align-items: flex-start;
+    -webkit-app-region: drag;
   }
 
   .controls {
